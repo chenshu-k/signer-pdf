@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>借據填寫與簽署</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    input, canvas, button {
+      display: block;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 400px;
+    }
+    canvas {
+      border: 1px solid #ccc;
+    }
+    #download-link {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>借據</h1>
+
+  <p>一、茲借款金額新台幣：</p>
+  <input type="text" id="amount_text" placeholder="請輸入金額（文字）">
+  <p>一、茲借款金額新台幣：</p>
+  <input type="number" id="amount_num" placeholder="請輸入金額（數字）">
+
+  <p>二、該款項當已親收足訖無訛。</p>
+  <p>三、到期借款人即將借款本金及利息以及應付之一切款項一併清償絕不拖延。</p>
+  <p>四、保證人願負連帶清償責任及拋棄先訴抗辯權。</p>
+  <p>五、本人明確知悉本借款為雙方合意訂定，並非急迫輕率無經驗，或受到任何暴。</p>
+  <p>六、唯恐說無憑，特立此書。</p>
+
+  <input type="text" id="name" placeholder="請輸入姓名">
+  <input type="text" id="id" placeholder="請輸入身分證字號">
+  <input type="text" id="address" placeholder="請輸入地址">
+  <input type="date" id="date">
+
+  <p>請在下方簽名：</p>
+  <canvas id="signature-pad" width="400" height="150"></canvas>
+  <button onclick="clearSignature()">清除簽名</button>
+  <button onclick="generatePDF()">下載借據 PDF</button>
+  <a id="download-link" download="借據.pdf">點此下載</a>
+
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script>
+    const canvas = document.getElementById("signature-pad");
+    const signaturePad = new SignaturePad(canvas);
+
+    function clearSignature() {
+      signaturePad.clear();
+    }
+
+    async function generatePDF() {
+      const amountText = document.getElementById("amount_text").value;
+      const amountNum = document.getElementById("amount_num").value;
+      const name = document.getElementById("name").value;
+      const id = document.getElementById("id").value;
+      const address = document.getElementById("address").value;
+      const date = document.getElementById("date").value;
+
+      const { PDFDocument, rgb } = PDFLib;
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595.28, 841.89]);
+
+      page.drawText("借據", { x: 50, y: 800, size: 20 });
+
+      page.drawText(`一、茲借款金額新台幣：${amountText}`, { x: 50, y: 770, size: 14 });
+      page.drawText(`一、茲借款金額新台幣：${amountNum}`, { x: 50, y: 750, size: 14 });
+      page.drawText("二、該款項當已親收足訖無訛。", { x: 50, y: 730, size: 14 });
+      page.drawText("三、到期借款人即將借款本金及利息以及應付之一切款項一併清償絕不拖延。", { x: 50, y: 710, size: 14 });
+      page.drawText("四、保證人願負連帶清償責任及拋棄先訴抗辯權。", { x: 50, y: 690, size: 14 });
+      page.drawText("五、本人明確知悉本借款為雙方合意訂定，並非急迫輕率無經驗，或受到任何暴。", { x: 50, y: 670, size: 14 });
+      page.drawText("六、唯恐說無憑，特立此書。", { x: 50, y: 650, size: 14 });
+
+      page.drawText(`姓名：${name}`, { x: 50, y: 620, size: 14 });
+      page.drawText(`身分證字號：${id}`, { x: 50, y: 600, size: 14 });
+      page.drawText(`地址：${address}`, { x: 50, y: 580, size: 14 });
+      page.drawText(`日期：${date}`, { x: 50, y: 560, size: 14 });
+
+      if (!signaturePad.isEmpty()) {
+        const signatureDataUrl = signaturePad.toDataURL();
+        const pngImageBytes = await fetch(signatureDataUrl).then(res => res.arrayBuffer());
+        const pngImage = await pdfDoc.embedPng(pngImageBytes);
+        const pngDims = pngImage.scale(0.5);
+        page.drawImage(pngImage, {
+          x: 50,
+          y: 480,
+          width: pngDims.width,
+          height: pngDims.height
+        });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const link = document.getElementById("download-link");
+      link.href = URL.createObjectURL(blob);
+      link.style.display = "inline";
+    }
+  </script>
+</body>
+</html>
